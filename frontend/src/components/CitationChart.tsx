@@ -29,21 +29,22 @@ interface CitationChartProps {
 
 const CitationChart = ({ articles }: CitationChartProps) => {
 
-  const yearCitations = articles.reduce((acc, article) => {
+  // 统计每年爬取到的论文数量
+  const yearCounts = articles.reduce((acc, article) => {
     if (article.year) {
-      acc[article.year] = (acc[article.year] || 0) + article.citations
+      acc[article.year] = (acc[article.year] || 0) + 1
     }
     return acc
   }, {} as Record<number, number>)
 
-  const sortedYears = Object.keys(yearCitations).map(Number).sort()
+  const sortedYears = Object.keys(yearCounts).map(Number).sort()
   
   const data = {
     labels: sortedYears.map(String),
     datasets: [
       {
-        label: 'Total Citations',
-        data: sortedYears.map(year => yearCitations[year]),
+        label: 'Number of Papers',
+        data: sortedYears.map(year => yearCounts[year]),
         backgroundColor: 'rgba(14, 165, 233, 0.5)',
         borderColor: 'rgb(14, 165, 233)',
         borderWidth: 1,
@@ -59,7 +60,7 @@ const CitationChart = ({ articles }: CitationChartProps) => {
       },
       title: {
         display: true,
-        text: 'Citations by Year',
+        text: 'Papers by Publication Year',
       },
     },
     scales: {
@@ -67,7 +68,16 @@ const CitationChart = ({ articles }: CitationChartProps) => {
         beginAtZero: true,
         title: {
           display: true,
-          text: 'Citations',
+          text: 'Number of Papers',
+        },
+        ticks: {
+          stepSize: 1,
+        },
+      },
+      x: {
+        title: {
+          display: true,
+          text: 'Publication Year',
         },
       },
     },

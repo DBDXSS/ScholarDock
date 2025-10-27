@@ -25,6 +25,7 @@ class OriginalScholarSpider:
         self.base_url = 'https://scholar.google.com/scholar?start={}&q={}&hl=en&as_sdt=0,5'
         self.startyear_url = '&as_ylo={}'
         self.endyear_url = '&as_yhi={}'
+        self.sort_url = '&scisbd={}'  # Sort parameter
         self.robot_keywords = ['unusual traffic from your computer network', 'not a robot', 'We\'re sorry', 'blocked']
         self.session = None
         self.driver = None
@@ -57,8 +58,8 @@ class OriginalScholarSpider:
         if self.driver:
             self.driver.quit()
     
-    def _create_main_url(self, start_year: Optional[int] = None, end_year: Optional[int] = None) -> str:
-        """Create main URL based on year filters"""
+    def _create_main_url(self, start_year: Optional[int] = None, end_year: Optional[int] = None, sort_by: str = 'relevance') -> str:
+        """Create main URL based on year filters and sort option"""
         gscholar_main_url = self.base_url
         
         if start_year:
@@ -66,6 +67,13 @@ class OriginalScholarSpider:
             
         if end_year and end_year != datetime.now().year:
             gscholar_main_url = gscholar_main_url + self.endyear_url.format(end_year)
+        
+        # Add sort parameter
+        # relevance: 0 (default), date: 1
+        if sort_by == 'date':
+            gscholar_main_url = gscholar_main_url + self.sort_url.format(1)
+        elif sort_by == 'relevance':
+            gscholar_main_url = gscholar_main_url + self.sort_url.format(0)
             
         return gscholar_main_url
     
@@ -238,6 +246,10 @@ class OriginalScholarSpider:
             publisher = "Unknown Publisher"
             venue = "Unknown Venue"
             description = None
+            pdf_url = None
+            
+            # Extract PDF link from Google Scholar page
+            pdf_url = self._extract_pdf_link(div)
             
             # Title and link - try multiple selectors with more aggressive approach
             title_elem = div.find('h3')
@@ -357,7 +369,8 @@ class OriginalScholarSpider:
                 citations=citations,
                 citations_per_year=citations_per_year,
                 description=description,
-                url=url
+                url=url,
+                pdf_url=pdf_url
             )
             
         except Exception as e:
@@ -376,8 +389,9 @@ class OriginalScholarSpider:
                         year=None,
                         citations=fallback_citations,
                         citations_per_year=0.0,
-                        description=basic_text[:200] + "..." if len(basic_text) > 200 else basic_text,
-                        url=None
+                        description=basic_text,
+                        url=None,
+                        pdf_url=None
                     )
                 else:
                     # Even if we have very little info, create a minimal record
@@ -391,7 +405,8 @@ class OriginalScholarSpider:
                         citations=0,
                         citations_per_year=0.0,
                         description="Content could not be parsed",
-                        url=None
+                        url=None,
+                        pdf_url=None
                     )
             except Exception as fallback_error:
                 print(f"❌ Complete fallback failed: {fallback_error}")
@@ -405,18 +420,81 @@ class OriginalScholarSpider:
                     citations=0,
                     citations_per_year=0.0,
                     description="Article parsing completely failed",
-                    url=None
+                    url=None,
+                    pdf_url=None
                 )
     
-    async def search(self, keyword: str, num_results: int = 50, 
-                    start_year: Optional[int] = None, 
-                    end_year: Optional[int] = None) -> List[ArticleSchema]:
-        """Search Google Scholar using the original working method"""
+    def _extract_pdf_link(self, div) -> Optional[str]:
+        """
+        Extract PDF link from Google Scholar article div
+        """
+        try:
+            # Look for PDF links in various formats
+            # 1. Look for direct PDF links in anchor tags
+            pdf_links = div.find_all('a', href=True)
+            for link in pdf_links:
+                href = link.get('href', '')
+                text = link.get_text().strip().lower()
+                
+                # Check if this is a PDF link
+                if (href.endswith('.pdf') or
+                    'pdf' in text or
+                    'filetype:pdf' in href or
+                    '.pdf' in href):
+                    # Make sure it's a valid URL
+                    if href.startswith('http'):
+                        return href
+                    elif href.startswith('/'):
+                        return f"https://scholar.google.com{href}"
+            
+            # 2. Look for PDF links in specific Google Scholar patterns
+            # Sometimes PDFs are in gs_or_ggsm divs with specific classes
+            gs_or_divs = div.find_all('div', {'class': ['gs_or_ggsm', 'gs_md_wp gs_ttss']})
+            for gs_div in gs_or_divs:
+                pdf_links = gs_div.find_all('a', href=True)
+                for link in pdf_links:
+                    href = link.get('href', '')
+                    if href.endswith('.pdf') or '.pdf' in href:
+                        if href.startswith('http'):
+                            return href
+            
+            # 3. Look for arxiv, researchgate, or other repository links that might have PDFs
+            for link in pdf_links:
+                href = link.get('href', '')
+                if any(domain in href.lower() for domain in ['arxiv.org', 'researchgate.net', 'ieee.org', 'acm.org']):
+                    # These sites often have PDF versions
+                    if 'arxiv.org' in href and '/abs/' in href:
+                        # Convert arxiv abstract link to PDF link
+                        pdf_href = href.replace('/abs/', '/pdf/') + '.pdf'
+                        return pdf_href
+                    elif href.startswith('http'):
+                        return href
+            
+            return None
+            
+        except Exception as e:
+            print(f"Error extracting PDF link: {e}")
+            return None
+    
+    async def search(self, keyword: str, num_results: int = 50,
+                    start_year: Optional[int] = None,
+                    end_year: Optional[int] = None,
+                    sort_by: str = 'relevance') -> List[ArticleSchema]:
+        """Search Google Scholar using the original working method
+        
+        Args:
+            keyword: Search term
+            num_results: Number of results to fetch
+            start_year: Start year filter
+            end_year: End year filter
+            sort_by: Sort order - 'relevance' (default) or 'date'
+        """
         
         articles = []
-        gscholar_main_url = self._create_main_url(start_year, end_year)
+        gscholar_main_url = self._create_main_url(start_year, end_year, sort_by)
         
         print(f"🔍 Searching Google Scholar for '{keyword}' (target: {num_results} results)")
+        print(f"📊 Sort by: {sort_by}")
         print(f"🌐 Using URL pattern: {gscholar_main_url}")
         
         # Get content from URLs in batches of 10

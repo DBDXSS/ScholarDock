@@ -30,7 +30,9 @@ const HistoryPage = () => {
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `scholar_results_${searchId}.${format}`
+      // 设置正确的文件扩展名
+      const fileExtension = format === 'excel' ? 'xlsx' : format
+      a.download = `scholar_results_${searchId}.${fileExtension}`
       document.body.appendChild(a)
       a.click()
       window.URL.revokeObjectURL(url)

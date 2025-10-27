@@ -70,7 +70,8 @@ async def search_articles(
                 keyword=request.keyword,
                 num_results=request.num_results,
                 start_year=request.start_year,
-                end_year=request.end_year
+                end_year=request.end_year,
+                sort_by=request.sort_by
             )
         
         logger.info(f"📊 Spider returned {len(articles)} articles")
@@ -96,6 +97,7 @@ async def search_articles(
                     citations_per_year=article.citations_per_year,
                     description=article.description,
                     url=article.url,
+                    pdf_url=article.pdf_url,
                     search_id=search_record.id
                 )
                 db.add(article_db)
@@ -255,13 +257,29 @@ async def download_pdfs(
                 max_concurrent=3
             )
         
-        success_count = sum(1 for r in results if r['success'])
-        logger.info(f"✅ PDF download completed: {success_count}/{len(results)} successful")
+        success_count = len(results['successful'])
+        total_count = results['total']
+        logger.info(f"✅ PDF download completed: {success_count}/{total_count} successful")
+        
+        # 转换结果格式以匹配响应模型
+        formatted_results = []
+        for item in results['successful']:
+            formatted_results.append({
+                'success': True,
+                'title': item['title'],
+                'filepath': item['filepath']
+            })
+        for item in results['failed']:
+            formatted_results.append({
+                'success': False,
+                'title': item['title'],
+                'url': item['url']
+            })
         
         return PDFDownloadResponse(
             success=True,
-            message=f"Download completed: {success_count}/{len(results)} files downloaded successfully",
-            results=results
+            message=f"Download completed: {success_count}/{total_count} files downloaded successfully",
+            results=formatted_results
         )
         
     except Exception as e:

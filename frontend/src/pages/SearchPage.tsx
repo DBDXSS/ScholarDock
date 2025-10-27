@@ -15,6 +15,7 @@ const SearchPage = () => {
     num_results: 50,
     start_year: undefined,
     end_year: undefined,
+    sort_by: 'relevance',
   })
 
   const searchMutation = useMutation(searchAPI.search, {
@@ -75,7 +76,7 @@ const SearchPage = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 <FileText className="inline h-4 w-4 mr-1" />
@@ -127,6 +128,21 @@ const SearchPage = () => {
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               />
             </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <SortDesc className="inline h-4 w-4 mr-1" />
+                Sort By
+              </label>
+              <select
+                value={formData.sort_by}
+                onChange={(e) => setFormData({ ...formData, sort_by: e.target.value as 'relevance' | 'date' })}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              >
+                <option value="relevance">Relevance</option>
+                <option value="date">Date (Newest First)</option>
+              </select>
+            </div>
           </div>
 
 
@@ -149,44 +165,6 @@ const SearchPage = () => {
           </button>
         </div>
       </motion.form>
-
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.4 }}
-        className="mt-8 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-700 rounded-lg p-6"
-      >
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 text-center">
-          💬 Join Our Community
-        </h3>
-        <p className="text-sm text-gray-600 dark:text-gray-400 text-center mb-4">
-          Get help, share feedback, and connect with other users
-        </p>
-        <div className="flex flex-wrap justify-center gap-4">
-          <a 
-            href="https://discord.gg/nCnmRBM4"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center space-x-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm transition-colors"
-          >
-            <span>🎮</span>
-            <span>Discord</span>
-          </a>
-          <a 
-            href="https://t.me/ScholarDock"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm transition-colors"
-          >
-            <span>✈️</span>
-            <span>Telegram</span>
-          </a>
-          <span className="inline-flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm">
-            <span>🐧</span>
-            <span>QQ: 758971907</span>
-          </span>
-        </div>
-      </motion.div>
 
       <motion.div
         initial={{ opacity: 0 }}

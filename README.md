@@ -1,31 +1,17 @@
 # ScholarDock
 
-<p align="center">
-  <a href="README.md">English</a> •
-  <a href="README_CN.md">中文</a> •
-  <a href="README_JP.md">日本語</a>
-</p>
-
 A modern, full-stack web application for searching and analyzing academic articles from Google Scholar. Built with FastAPI backend and React TypeScript frontend.
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.8+-blue.svg)
 ![React](https://img.shields.io/badge/react-18.2+-blue.svg)
 
-## 📸 Screenshots
-
-### Homepage
-![Homepage](docs/screenshots/homepage.png)
-
-### Search Results with Data Visualization
-![Search Results](docs/screenshots/search_results.png)
-
 ## ✨ Features
 
 ### 🔍 Advanced Search
 - Search Google Scholar with customizable parameters
 - Filter by publication year range
-- Sort results by citations, citations per year, or publication year
+- Sort results by relevance or publication date
 - Support for up to 1000 results per search
 
 ### 📊 Data Visualization
@@ -33,10 +19,17 @@ A modern, full-stack web application for searching and analyzing academic articl
 - Publication distribution analysis
 - Real-time data filtering and exploration
 
-### 💾 Data Management
+### 📥 PDF Download
+- Batch PDF download functionality
+- Individual PDF download for articles
+- Configurable download path and concurrency
+- Download progress tracking and results reporting
+
+### � Data Management
 - Search history with SQLite database storage
 - Export results in multiple formats (CSV, JSON, Excel, BibTeX)
 - Delete and manage previous searches
+- Complete article abstracts without truncation
 
 ### 🎨 Modern UI/UX
 - Responsive design with Tailwind CSS
@@ -60,7 +53,7 @@ A modern, full-stack web application for searching and analyzing academic articl
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/JessyTsui/scholardock.git
+git clone <your-repository-url>
 cd scholardock
 ```
 
@@ -97,13 +90,6 @@ npm install
 ./stop.sh
 ```
 
-### Advanced Start with Monitoring
-
-```bash
-# Start with process monitoring and colored output
-./dev-server.sh
-```
-
 ### Manual Start
 
 ```bash
@@ -133,6 +119,7 @@ Once the backend is running, visit `http://localhost:8001/docs` for interactive 
 - `GET /api/searches` - Get search history
 - `GET /api/search/{search_id}` - Get search details
 - `GET /api/export/{search_id}` - Export search results
+- `POST /api/download/multiple` - Download multiple PDFs
 - `DELETE /api/search/{search_id}` - Delete a search
 
 ## 🏗️ Project Structure
@@ -148,8 +135,9 @@ scholardock/
 │   ├── models/
 │   │   └── article.py       # Data models
 │   ├── services/
-│   │   ├── spider.py        # Web scraping logic
-│   │   └── export.py        # Export functionality
+│   │   ├── original_spider.py # Web scraping logic
+│   │   ├── export.py        # Export functionality
+│   │   └── pdf_downloader.py # PDF download service
 │   └── run.py               # Backend entry point
 ├── frontend/
 │   ├── src/
@@ -159,6 +147,7 @@ scholardock/
 │   │   └── contexts/        # React contexts
 │   └── package.json
 ├── data/                    # SQLite database storage
+├── downloads/               # PDF download directory
 └── README.md
 ```
 
@@ -181,9 +170,10 @@ Edit `frontend/vite.config.ts` for proxy settings and development server configu
 
 1. **Search Articles**: Enter keywords and optional filters on the search page
 2. **View Results**: Browse articles with citation counts and publication details
-3. **Visualize Data**: Analyze citation trends with interactive charts
-4. **Export Data**: Download results in your preferred format
-5. **Manage History**: Access and manage previous searches
+3. **Download PDFs**: Select articles and download PDFs individually or in batch
+4. **Visualize Data**: Analyze citation trends with interactive charts
+5. **Export Data**: Download results in your preferred format (CSV, JSON, Excel, BibTeX)
+6. **Manage History**: Access and manage previous searches
 
 ## 🐛 Troubleshooting
 
@@ -200,6 +190,11 @@ Edit `frontend/vite.config.ts` for proxy settings and development server configu
 3. **Database Errors**
    - Ensure the `data` directory exists and has write permissions
    - Check database connection string in configuration
+
+4. **PDF Download Issues**
+   - Ensure the `downloads` directory exists and has write permissions
+   - Check network connectivity for PDF access
+   - Some PDFs may not be publicly accessible
 
 ## 🤝 Contributing
 
@@ -218,3 +213,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - FastAPI for the excellent web framework
 - React and TypeScript communities
 - All contributors to this project
+- Thanks for [JessyTsui's opensource work!](https://github.com/JessyTsui/ScholarDock)

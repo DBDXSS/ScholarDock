@@ -45,6 +45,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+package-lock.json
 
 # Frontend build
 frontend/dist/
@@ -71,6 +72,9 @@ coverage/
 htmlcov/
 .pytest_cache/
 .mypy_cache/
+test_*.py
+*_test.py
+debug_*.py
 
 # Selenium
 geckodriver.log
@@ -82,3 +86,20 @@ chromedriver.log
 *.bak
 *.swp
 *~
+
+# PDF downloads
+downloads/*.pdf
+
+# Documentation screenshots
+docs/screenshots/
+
+# Test directories
+test_downloads/
+
+# Development scripts
+dev-server.sh
+install_*.py
+migrate_*.py
+
+# JoyCode
+.joycode/

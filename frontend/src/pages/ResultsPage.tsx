@@ -56,13 +56,17 @@ const ResultsPage = () => {
     setSelectedArticles(newSelected)
   }
 
-  // 全选/取消全选
+  // 全选/取消全选 (只选择有PDF的文章)
   const handleSelectAll = () => {
-    if (selectedArticles.size === paginatedArticles.length) {
+    const articlesWithPdf = paginatedArticles
+      .map((article, index) => ({ article, index: startIndex + index }))
+      .filter(({ article }) => article.pdf_url)
+      .map(({ index }) => index)
+    
+    if (selectedArticles.size === articlesWithPdf.length && articlesWithPdf.length > 0) {
       setSelectedArticles(new Set())
     } else {
-      const allIndices = paginatedArticles.map((_, index) => startIndex + index)
-      setSelectedArticles(new Set(allIndices))
+      setSelectedArticles(new Set(articlesWithPdf))
     }
   }
 
@@ -77,12 +81,12 @@ const ResultsPage = () => {
       const article = sortedArticles[index]
       return {
         title: article.title,
-        url: article.url || ''
+        url: article.pdf_url || article.url || ''
       }
     }).filter(article => article.url)
 
     if (articlesToDownload.length === 0) {
-      alert('选中的文章没有可用的URL')
+      alert('选中的文章没有可用的PDF链接')
       return
     }
 
@@ -94,14 +98,15 @@ const ResultsPage = () => {
 
   // 下载单个PDF
   const handleDownloadSingle = async (article: any) => {
-    if (!article.url) {
-      alert('该文章没有可用的URL')
+    const pdfUrl = article.pdf_url || article.url
+    if (!pdfUrl) {
+      alert('该文章没有可用的PDF链接')
       return
     }
 
     try {
       setDownloadProgress(`正在下载: ${article.title}`)
-      const result = await pdfAPI.downloadSingle(article.title, article.url, downloadPath || undefined)
+      const result = await pdfAPI.downloadSingle(article.title, pdfUrl, downloadPath || undefined)
       setDownloadProgress('')
       
       if (result.success) {
@@ -302,8 +307,12 @@ const ResultsPage = () => {
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => {
-                  const allIds = new Set(paginatedArticles.map((_, idx) => startIndex + idx))
-                  setSelectedArticles(allIds)
+                  // 只选择当前页面有PDF的文章
+                  const articlesWithPdfOnPage = paginatedArticles
+                    .map((article, index) => ({ article, index: startIndex + index }))
+                    .filter(({ article }) => article.pdf_url)
+                    .map(({ index }) => index)
+                  setSelectedArticles(new Set(articlesWithPdfOnPage))
                 }}
                 className="px-3 py-1 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
               >
@@ -312,8 +321,12 @@ const ResultsPage = () => {
               
               <button
                 onClick={() => {
-                  const allIds = new Set(sortedArticles.map((_, idx) => idx))
-                  setSelectedArticles(allIds)
+                  // 只选择所有结果中有PDF的文章
+                  const articlesWithPdf = sortedArticles
+                    .map((article, index) => ({ article, index }))
+                    .filter(({ article }) => article.pdf_url)
+                    .map(({ index }) => index)
+                  setSelectedArticles(new Set(articlesWithPdf))
                 }}
                 className="px-3 py-1 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
               >
@@ -403,20 +416,25 @@ const ResultsPage = () => {
             className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow"
           >
             <div className="flex items-start space-x-3">
-              <input
-                type="checkbox"
-                checked={selectedArticles.has(globalIndex)}
-                onChange={(e) => {
-                  const newSelected = new Set(selectedArticles)
-                  if (e.target.checked) {
-                    newSelected.add(globalIndex)
-                  } else {
-                    newSelected.delete(globalIndex)
-                  }
-                  setSelectedArticles(newSelected)
-                }}
-                className="mt-1 h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-              />
+              {article.pdf_url && (
+                <input
+                  type="checkbox"
+                  checked={selectedArticles.has(globalIndex)}
+                  onChange={(e) => {
+                    const newSelected = new Set(selectedArticles)
+                    if (e.target.checked) {
+                      newSelected.add(globalIndex)
+                    } else {
+                      newSelected.delete(globalIndex)
+                    }
+                    setSelectedArticles(newSelected)
+                  }}
+                  className="mt-1 h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                />
+              )}
+              {!article.pdf_url && (
+                <div className="mt-1 h-4 w-4"></div>
+              )}
               
               <div className="flex-1">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
@@ -460,7 +478,7 @@ const ResultsPage = () => {
             </div>
 
             {article.description && (
-              <p className="text-gray-700 dark:text-gray-300 mb-3 line-clamp-3">
+              <p className="text-gray-700 dark:text-gray-300 mb-3">
                 <Quote className="inline h-4 w-4 mr-1" />
                 {article.description}
               </p>
@@ -481,7 +499,7 @@ const ResultsPage = () => {
                 )}
               </div>
               
-              {article.url && (
+              {article.pdf_url && (
                 <button
                   onClick={() => handleDownloadSingle(article)}
                   disabled={downloadProgress.includes(article.title)}

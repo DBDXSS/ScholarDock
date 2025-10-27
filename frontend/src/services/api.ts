@@ -12,6 +12,7 @@ export interface SearchRequest {
   num_results: number
   start_year?: number
   end_year?: number
+  sort_by?: 'relevance' | 'date'
 }
 
 export interface Article {

@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Literal
 from pydantic import BaseModel, Field
 from sqlalchemy import Column, Integer, String, DateTime, Float, Text, ForeignKey
 from sqlalchemy.orm import relationship
@@ -21,6 +21,7 @@ class ArticleDB(Base):
     citations_per_year = Column(Float, default=0.0)
     description = Column(Text)
     url = Column(String(500))
+    pdf_url = Column(String(500))  # Google Scholar提供的PDF链接
     search_id = Column(Integer, ForeignKey("searches.id"))
     created_at = Column(DateTime, default=datetime.utcnow)
     
@@ -52,6 +53,7 @@ class ArticleSchema(BaseModel):
     citations_per_year: float = 0.0
     description: Optional[str] = None
     url: Optional[str] = None
+    pdf_url: Optional[str] = None  # Google Scholar提供的PDF链接
     created_at: Optional[datetime] = None
     
     class Config:
@@ -76,6 +78,7 @@ class SearchRequest(BaseModel):
     num_results: int = Field(50, ge=10, le=1000)
     start_year: Optional[int] = Field(None, ge=1900, le=datetime.now().year)
     end_year: Optional[int] = Field(None, ge=1900, le=datetime.now().year)
+    sort_by: Literal['relevance', 'date'] = Field('relevance', description="Sort by relevance or date")
 
 
 class SearchResponse(BaseModel):
