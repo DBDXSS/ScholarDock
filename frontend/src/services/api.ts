@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: 'http://localhost:8001/api',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -12,7 +12,6 @@ export interface SearchRequest {
   num_results: number
   start_year?: number
   end_year?: number
-  sort_by: string
 }
 
 export interface Article {
@@ -77,5 +76,49 @@ export const searchAPI = {
   },
 }
 
+// PDF下载相关接口
+export interface PDFDownloadRequest {
+  articles: Array<{
+    title: string
+    url: string
+  }>
+  download_path?: string
+}
+
+export interface PDFDownloadResult {
+  title: string
+  url: string
+  filepath: string | null
+  success: boolean
+  error?: string
+}
+
+export interface PDFDownloadResponse {
+  success: boolean
+  message: string
+  results: PDFDownloadResult[]
+}
+
+export const pdfAPI = {
+  downloadMultiple: async (request: PDFDownloadRequest): Promise<PDFDownloadResponse> => {
+    const { data } = await api.post<PDFDownloadResponse>('/download-pdf', request)
+    return data
+  },
+
+  downloadSingle: async (
+    title: string,
+    url: string,
+    downloadPath?: string
+  ): Promise<{
+    success: boolean
+    message: string
+    filepath: string | null
+  }> => {
+    const { data } = await api.post('/download-single-pdf', null, {
+      params: { title, url, download_path: downloadPath }
+    })
+    return data
+  },
+}
 
 export default api

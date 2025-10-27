@@ -12,6 +12,7 @@ from core.database import init_db, get_db
 from models.article import SearchRequest, SearchResponse, SearchDB, ArticleDB, SearchSchema, ArticleSchema
 from services.original_spider import OriginalScholarSpider
 from services.export import ExportService
+from services.pdf_downloader import PDFDownloader
 
 
 @asynccontextmanager
@@ -52,7 +53,7 @@ async def search_articles(
     import logging
     logger = logging.getLogger(__name__)
     
-    logger.info(f"🔍 Starting search for keyword: '{request.keyword}', num_results: {request.num_results}, sort_by: {request.sort_by}")
+    logger.info(f"🔍 Starting search for keyword: '{request.keyword}', num_results: {request.num_results}")
     
     search_record = SearchDB(
         keyword=request.keyword,
@@ -78,20 +79,8 @@ async def search_articles(
         if not articles:
             logger.warning(f"No results found for '{request.keyword}' - may be blocked by Google Scholar")
         
-        # Improved sorting logic with better handling of None values
-        original_count = len(articles)
-        if request.sort_by == "citations":
-            articles.sort(key=lambda x: x.citations or 0, reverse=True)
-            logger.info(f"📈 Sorted {original_count} articles by citations")
-        elif request.sort_by == "citations_per_year":
-            articles.sort(key=lambda x: x.citations_per_year or 0.0, reverse=True)
-            logger.info(f"📈 Sorted {original_count} articles by citations per year")
-        elif request.sort_by == "year":
-            # Sort by year, putting None values at the end
-            articles.sort(key=lambda x: (x.year is None, x.year or 0), reverse=True)
-            logger.info(f"📈 Sorted {original_count} articles by year")
-        else:
-            logger.info(f"📈 Maintaining original Google Scholar order for {original_count} articles")
+        # Keep original Google Scholar order - sorting will be done on frontend
+        logger.info(f"📈 Maintaining original Google Scholar order for {len(articles)} articles")
         
         # Store articles in database
         stored_count = 0
@@ -234,4 +223,88 @@ async def delete_search(
     
     return {"message": "Search deleted successfully"}
 
+# PDF下载相关的请求和响应模型
+from pydantic import BaseModel
+
+class PDFDownloadRequest(BaseModel):
+    articles: List[dict]  # 包含title和url的文章列表
+    download_path: Optional[str] = None
+
+class PDFDownloadResponse(BaseModel):
+    success: bool
+    message: str
+    results: List[dict]
+
+
+@app.post("/api/download-pdf", response_model=PDFDownloadResponse)
+async def download_pdfs(
+    request: PDFDownloadRequest,
+    background_tasks: BackgroundTasks
+):
+    """批量下载PDF文件"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    logger.info(f"📥 Starting PDF download for {len(request.articles)} articles")
+    
+    try:
+        async with PDFDownloader() as downloader:
+            results = await downloader.download_multiple_pdfs(
+                articles=request.articles,
+                download_path=request.download_path,
+                max_concurrent=3
+            )
+        
+        success_count = sum(1 for r in results if r['success'])
+        logger.info(f"✅ PDF download completed: {success_count}/{len(results)} successful")
+        
+        return PDFDownloadResponse(
+            success=True,
+            message=f"Download completed: {success_count}/{len(results)} files downloaded successfully",
+            results=results
+        )
+        
+    except Exception as e:
+        logger.error(f"❌ PDF download failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"PDF download failed: {str(e)}")
+
+
+@app.post("/api/download-single-pdf")
+async def download_single_pdf(
+    title: str,
+    url: str,
+    download_path: Optional[str] = None
+):
+    """下载单个PDF文件"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    logger.info(f"📥 Starting single PDF download for: {title}")
+    
+    try:
+        async with PDFDownloader() as downloader:
+            filepath = await downloader.download_article_pdf(
+                article_title=title,
+                article_url=url,
+                download_path=download_path
+            )
+        
+        if filepath:
+            logger.info(f"✅ PDF downloaded successfully: {filepath}")
+            return {
+                "success": True,
+                "message": "PDF downloaded successfully",
+                "filepath": filepath
+            }
+        else:
+            logger.warning(f"⚠️ PDF download failed for: {title}")
+            return {
+                "success": False,
+                "message": "Failed to download PDF - file may not be available",
+                "filepath": None
+            }
+        
+    except Exception as e:
+        logger.error(f"❌ Single PDF download failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"PDF download failed: {str(e)}")
 

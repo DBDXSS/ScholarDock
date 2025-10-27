@@ -13,7 +13,6 @@ const SearchPage = () => {
   const [formData, setFormData] = useState<SearchRequest>({
     keyword: '',
     num_results: 50,
-    sort_by: 'citations',
     start_year: undefined,
     end_year: undefined,
   })
@@ -130,21 +129,6 @@ const SearchPage = () => {
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              <SortDesc className="inline h-4 w-4 mr-1" />
-              Sort By
-            </label>
-            <select
-              value={formData.sort_by}
-              onChange={(e) => setFormData({ ...formData, sort_by: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-            >
-              <option value="citations">Total Citations</option>
-              <option value="citations_per_year">Citations per Year</option>
-              <option value="year">Publication Year</option>
-            </select>
-          </div>
 
           <button
             type="submit"

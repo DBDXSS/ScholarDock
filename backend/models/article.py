@@ -76,7 +76,6 @@ class SearchRequest(BaseModel):
     num_results: int = Field(50, ge=10, le=1000)
     start_year: Optional[int] = Field(None, ge=1900, le=datetime.now().year)
     end_year: Optional[int] = Field(None, ge=1900, le=datetime.now().year)
-    sort_by: str = Field("citations", pattern="^(citations|citations_per_year|year)$")
 
 
 class SearchResponse(BaseModel):
