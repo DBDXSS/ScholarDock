@@ -49,6 +49,11 @@ async def search_articles(
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db)
 ):
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    logger.info(f"🔍 Starting search for keyword: '{request.keyword}', num_results: {request.num_results}, sort_by: {request.sort_by}")
+    
     search_record = SearchDB(
         keyword=request.keyword,
         start_year=request.start_year,
@@ -67,45 +72,65 @@ async def search_articles(
                 end_year=request.end_year
             )
         
+        logger.info(f"📊 Spider returned {len(articles)} articles")
+        
         # Return empty results if nothing found
         if not articles:
-            print(f"No results found for '{request.keyword}' - may be blocked by Google Scholar")
+            logger.warning(f"No results found for '{request.keyword}' - may be blocked by Google Scholar")
         
+        # Improved sorting logic with better handling of None values
+        original_count = len(articles)
         if request.sort_by == "citations":
-            articles.sort(key=lambda x: x.citations, reverse=True)
+            articles.sort(key=lambda x: x.citations or 0, reverse=True)
+            logger.info(f"📈 Sorted {original_count} articles by citations")
         elif request.sort_by == "citations_per_year":
-            articles.sort(key=lambda x: x.citations_per_year, reverse=True)
+            articles.sort(key=lambda x: x.citations_per_year or 0.0, reverse=True)
+            logger.info(f"📈 Sorted {original_count} articles by citations per year")
         elif request.sort_by == "year":
-            articles.sort(key=lambda x: x.year or 0, reverse=True)
+            # Sort by year, putting None values at the end
+            articles.sort(key=lambda x: (x.year is None, x.year or 0), reverse=True)
+            logger.info(f"📈 Sorted {original_count} articles by year")
+        else:
+            logger.info(f"📈 Maintaining original Google Scholar order for {original_count} articles")
         
+        # Store articles in database
+        stored_count = 0
         for article in articles:
-            article_db = ArticleDB(
-                title=article.title,
-                authors=article.authors,
-                venue=article.venue,
-                publisher=article.publisher,
-                year=article.year,
-                citations=article.citations,
-                citations_per_year=article.citations_per_year,
-                description=article.description,
-                url=article.url,
-                search_id=search_record.id
-            )
-            db.add(article_db)
+            try:
+                article_db = ArticleDB(
+                    title=article.title,
+                    authors=article.authors,
+                    venue=article.venue,
+                    publisher=article.publisher,
+                    year=article.year,
+                    citations=article.citations,
+                    citations_per_year=article.citations_per_year,
+                    description=article.description,
+                    url=article.url,
+                    search_id=search_record.id
+                )
+                db.add(article_db)
+                stored_count += 1
+            except Exception as e:
+                logger.error(f"❌ Failed to store article '{article.title[:50]}...': {e}")
         
         search_record.total_results = len(articles)
         await db.commit()
+        
+        logger.info(f"✅ Search completed: {len(articles)} articles found, {stored_count} stored in database")
         
         return SearchResponse(
             search_id=search_record.id,
             keyword=request.keyword,
             total_results=len(articles),
-            articles=articles
+            articles=articles,
+            message=f"Search completed successfully. Found {len(articles)} articles."
         )
         
     except Exception as e:
         await db.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"❌ Search failed for '{request.keyword}': {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
 
 
 @app.get("/api/searches", response_model=List[SearchSchema])

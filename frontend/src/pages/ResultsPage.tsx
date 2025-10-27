@@ -31,6 +31,11 @@ const ResultsPage = () => {
     return true
   }) || []
 
+  // Calculate statistics
+  const totalArticles = search.articles?.length || 0
+  const displayedArticles = filteredArticles.length
+  const hasActiveFilters = filterYear !== null || filterMinCitations > 0
+
   const yearOptions = [...new Set(search.articles?.map(a => a.year).filter(Boolean))].sort((a, b) => b! - a!)
 
   return (
@@ -39,9 +44,23 @@ const ResultsPage = () => {
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
           Results for "{search.keyword}"
         </h1>
-        <p className="text-gray-600 dark:text-gray-400">
-          Found {search.total_results} articles
-        </p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-gray-600 dark:text-gray-400">
+            Found {search.total_results} articles
+            {totalArticles !== search.total_results && (
+              <span className="ml-2 text-sm">
+                ({totalArticles} successfully parsed)
+              </span>
+            )}
+          </p>
+          {hasActiveFilters && (
+            <div className="mt-2 sm:mt-0">
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                Filters Active: Showing {displayedArticles} of {totalArticles}
+              </span>
+            </div>
+          )}
+        </div>
       </div>
 
       {search.articles && search.articles.length > 0 && (
@@ -51,7 +70,7 @@ const ResultsPage = () => {
       )}
 
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 mb-6">
-        <div className="flex items-center space-x-4">
+        <div className="flex flex-wrap items-center gap-4">
           <Filter className="h-5 w-5 text-gray-600 dark:text-gray-400" />
           
           <select
@@ -78,8 +97,25 @@ const ResultsPage = () => {
             />
           </div>
           
+          {hasActiveFilters && (
+            <button
+              onClick={() => {
+                setFilterYear(null)
+                setFilterMinCitations(0)
+              }}
+              className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-md transition-colors"
+            >
+              Reset Filters
+            </button>
+          )}
+          
           <span className="text-sm text-gray-600 dark:text-gray-400 ml-auto">
-            Showing {filteredArticles.length} of {search.articles?.length || 0} articles
+            Showing {displayedArticles} of {totalArticles} articles
+            {hasActiveFilters && (
+              <span className="block text-xs text-blue-600 dark:text-blue-400">
+                ({totalArticles - displayedArticles} filtered out)
+              </span>
+            )}
           </span>
         </div>
       </div>
