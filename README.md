@@ -51,6 +51,8 @@ A modern, full-stack web application for searching and analyzing academic articl
 
 ## 🛠️ Installation
 
+> **Windows用户请参考**: [Windows安装指南](README-Windows.md) 获取详细的Windows安装说明。
+
 ### 1. Clone the repository
 ```bash
 git clone <your-repository-url>
